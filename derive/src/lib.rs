@@ -89,7 +89,7 @@ fn with_recursive_count_guard(
         if guard_against_recursion {
             #recursive_count.with(|count| {
                 if count.get() > 0 {
-                    return Err(arbitrary::Error::NotEnoughData);
+                    return Err(arbitrary::trace_error(arbitrary::Error::NotEnoughData));
                 }
                 count.set(count.get() + 1);
                 Ok(())

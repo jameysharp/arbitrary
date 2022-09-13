@@ -8,7 +8,7 @@
 
 //! Wrappers around raw, unstructured bytes.
 
-use crate::{Arbitrary, Error, Result};
+use crate::{Arbitrary, Error, Result, trace_error};
 use std::marker::PhantomData;
 use std::ops::ControlFlow;
 use std::{mem, ops};
@@ -449,7 +449,7 @@ impl<'a> Unstructured<'a> {
     /// ```
     pub fn choose_index(&mut self, len: usize) -> Result<usize> {
         if len == 0 {
-            return Err(Error::EmptyChoose);
+            return Err(trace_error(Error::EmptyChoose));
         }
         let idx = self.int_in_range(0..=len - 1)?;
         Ok(idx)
@@ -547,7 +547,7 @@ impl<'a> Unstructured<'a> {
     /// ```
     pub fn bytes(&mut self, size: usize) -> Result<&'a [u8]> {
         if self.data.len() < size {
-            return Err(Error::NotEnoughData);
+            return Err(trace_error(Error::NotEnoughData));
         }
 
         let (for_buf, rest) = self.data.split_at(size);

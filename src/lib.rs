@@ -54,6 +54,25 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicUsize};
 use std::sync::{Arc, Mutex};
 
+#[track_caller]
+#[doc(hidden)]
+pub fn trace_error(e: Error) -> Error {
+    let bt = std::backtrace::Backtrace::force_capture();
+    let cwd = std::env::current_dir().unwrap();
+    let target_dir = cwd.join("stack");
+
+    let file = target_dir.join({
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        format!("{}.stack", now.as_nanos())
+    });
+
+    let bt = format!("{:?}\n{}", &e, bt);
+    std::fs::write(file, bt.as_bytes()).unwrap();
+
+    e
+}
+
 /// Generate arbitrary structured values from raw, unstructured data.
 ///
 /// The `Arbitrary` trait allows you to generate valid structured values, like
@@ -857,7 +876,7 @@ impl<'a> Arbitrary<'a> for &'a str {
     fn arbitrary_take_rest(u: Unstructured<'a>) -> Result<Self> {
         let bytes = u.take_rest();
         str::from_utf8(bytes)
-            .map_err(|_| Error::IncorrectFormat)
+            .map_err(|_| trace_error(Error::IncorrectFormat))
             .map(Into::into)
     }
 
@@ -1091,7 +1110,7 @@ macro_rules! implement_nonzero_int {
             fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
                 match Self::new(<$int as Arbitrary<'a>>::arbitrary(u)?) {
                     Some(n) => Ok(n),
-                    None => Err(Error::IncorrectFormat),
+                    None => Err(trace_error(Error::IncorrectFormat)),
                 }
             }
 
